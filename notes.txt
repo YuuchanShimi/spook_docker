@@ -1,0 +1,68 @@
+
+*** connected USB DEVICES ***
+$ lsusb
+    Silicon Labs CP210x UART Bridge = RPLidar A1 
+    Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO) = motor drive module ESP32
+    Orbbec 3D Technology International, Inc Astra Pro HD Camera || Orbbec 3D Technology International, Inc Astra Pro = Orbbec 3D Camera Astra Pro
+    JMTek, LLC. USB PnP Audio Device = USB speaker Device
+    Asahi Kasei Microsystems Co., Ltd AK5371  = USB microphone Device
+
+
+Add udev rules to assign aliases to usb devices
+  GNU nano 6.2                rplidar.rules                          
+# set the udev rule , make the device_port be fixed by rplidar
+#
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60">
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015">
+SUBSYSTEM=="sound", ATTRS{idVendor}=="0c76", ATTRS{idProduct}=="161f>
+SUBSYSTEM=="sound", ATTRS{idVendor}=="0556", ATTRS{idProduct}=="0002>
+KERNEL=="video*", ATTRS{idVendor}=="8086", ATTRS{idProduct}=="0b07",>
+
+
+    $ sudo udevadm control --reload
+    $ sudo /etc/init.d/udev restart
+    $ sudo udevadm trigger
+    $ sudo chmod 777 /dev/rplidar   
+
+encoder (working):
+$ ros2 run encoder_driver encoder_driver
+
+rplidar (working)
+$ ros2 launch rplidar_ros rplidar_a1_launch.py
+
+IMU (working):
+    address:0x28/i2c0 [i2c0 -- SDA (pin 27) SCL (pin 28)]
+    $ ros2 run imu_bno055 bno055_i2c_node
+    gives data.
+
+Camera servo(Working):
+    PCA9685 (A0 bridged, address: 0x41 i2c0)
+    channel 15 connected
+
+Camera ():
+    Run this on isaac_ros
+
+
+Motor drive module (working):
+    $ ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 
+         gets the micro-ros-agent running and connected to the ESP32 unit
+    $ ros2 topic pub /pwm_values std_msgs/msg/Int16MultiArray "{data: [50, 50]}"
+        sends  a test message to the topic.
+
+SLAM (works)
+    Seems i have the SLAM Transforms loaded correctly. 
+    $ ros2 launch bbboy_navstack autonomous_launch.py
+    $ ros2 launch slam_toolbox online_async_launch.py use_sim_time:=False
+    $ ros2 launch bbboy_simulation bringup_slam_launch.py use_sim_time:=False 
+
+Autonomous Navigation using nav2 (WIP)
+    Can get everything up on RVIZ. Need to tweak some params and topics etc.
+    $ ros2 launch bbboy_navstack autonomous_launch.py
+    $ ros2 launch bbboy_simulation bringup.launch.py
+    $ ros2 launch nav2_bringup bringup_launch.py use_sim_time:=False autostart:=False map:=/home/astro/bbboy_ws/src/bbboy_simulation/maps/2LDK_new.yaml params_file:=/home/astro/bbboy_ws/src/bbboy_navstack/params/bbboy_nav2_params.yaml
+
+Check frames with 
+$ ros2 run tf2_tools view_frames
+
+To publish an initial pose as a one-shot command 
+$ ros2 topic pub --once /initialpose geometry_msgs/msg/PoseWithCovarianceStamped "{header: {stamp: {sec: 0, nanosec: 0}, frame_id: 'odom'}, pose: {pose: {position: {x: 1.0, y: 2.0, z: 0.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}, covariance: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}}"
