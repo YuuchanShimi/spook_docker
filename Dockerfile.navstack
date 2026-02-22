@@ -1,4 +1,3 @@
-# Dockerfile for spook Personality on Jetson Orin
 FROM ros:humble
 
 ENV DEBIAN_FRONTEND=noninteractive
