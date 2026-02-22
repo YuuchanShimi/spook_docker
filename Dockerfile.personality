@@ -1,0 +1,43 @@
+# Dockerfile for spook Personality on Jetson Orin
+FROM ros:humble
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libopencv-dev \
+    python3-opencv \
+    libsdl2-dev \
+    libsdl2-2.0-0 \
+    espeak \
+    pyttsx3 \
+    python3-pyttsx3 \
+    alsa-utils \
+    libasound2 \
+    python3-yaml \
+    x11-utils \
+    x11-common \
+    libxkbcommon-x11-0 \
+    git \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ros2_ws
+
+COPY src ./src
+
+RUN . /opt/ros/humble/setup.sh && \
+    colcon build --packages-select spook_personality \
+    --cmake-args -DCMAKE_CXX_FLAGS="-O3 -march=native" \
+    --symlink-install
+
+RUN mkdir -p /root/.bbboy
+
+RUN echo '#!/bin/bash\n\
+source /opt/ros/humble/setup.bash\n\
+source /ros2_ws/install/setup.bash\n\
+exec "$@"' > /ros2_entrypoint.sh && chmod +x /ros2_entrypoint.sh
+
+ENTRYPOINT ["/ros2_entrypoint.sh"]
+CMD ["bash"]

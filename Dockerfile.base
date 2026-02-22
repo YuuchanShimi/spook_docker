@@ -1,0 +1,64 @@
+FROM ros:humble
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=humble
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    python3-pip \
+    wget \
+    curl \
+    nano \
+    vim \
+    python3-serial \
+    python3-yaml \
+    libopencv-dev \
+    python3-opencv \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-vcstool \
+    python3-rosdep \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    minicom \
+    picocom \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir \
+    adafruit-circuitpython-servokit \
+    pyserial \
+    Jetson.GPIO
+
+
+WORKDIR /ros2_ws
+RUN mkdir -p src
+
+RUN rosdep update
+
+COPY src ./src
+
+RUN apt-get update && \
+    cd /ros2_ws && \
+    rosdep install --from-paths src -y --ignore-src || true && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN . /opt/ros/humble/setup.sh && \
+    colcon build --packages-select spook_msgs \
+                 --packages-select encoder_driver \
+                 --packages-select spook_motor_drivers \
+    --cmake-args -DCMAKE_CXX_FLAGS="-O3 -march=native" \
+    --symlink-install
+
+RUN echo '#!/bin/bash\n\
+source /opt/ros/humble/setup.bash\n\
+source /ros2_ws/install/setup.bash\n\
+exec "$@"' > /ros2_entrypoint.sh && chmod +x /ros2_entrypoint.sh
+
+ENTRYPOINT ["/ros2_entrypoint.sh"]
+CMD ["bash"]

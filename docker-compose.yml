@@ -1,0 +1,69 @@
+services:
+  spook-micro-ros-agent:
+    image: microros/micro-ros-agent:jazzy
+    container_name: spook-micro-ros-agent
+    devices:
+      - /dev/motor_drive_module:/dev/motor_drive_module
+    network_mode: host
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - ROS_DOMAIN_ID=0
+      - ROS_LOCALHOST_ONLY=0
+    command: serial --dev /dev/motor_drive_module -v6
+    restart: unless-stopped
+
+  spook-base:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.base
+    image: spook-base:latest
+    container_name: spook-base
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - ROS_DOMAIN_ID=0
+      - ROS_LOCALHOST_ONLY=0
+    devices:
+      - /dev/motor_drive_module:/dev/motor_drive_module
+      - /dev/gpiochip0:/dev/gpiochip0      # GPIO access for encoder driver
+    volumes:
+      - ../src:/ros2_ws/src
+    network_mode: host
+    ipc: host
+    cap_add:
+      - SYS_NICE
+    command: bash -c "source /opt/ros/humble/setup.bash && cd /ros2_ws && colcon build --packages-select spook_motor_drivers encoder_driver spook_msgs --symlink-install && source install/setup.bash && ros2 launch spook_motor_drivers spook_motor_drivers_launch.py"
+    restart: unless-stopped
+
+  spook-personality:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.personality
+    image: spook-personality:latest
+    container_name: spook-personality
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - DISPLAY=${DISPLAY}
+      - ROS_DOMAIN_ID=0
+      - ROS_LOCALHOST_ONLY=0
+    devices:
+      - /dev/video0:/dev/video0           # Camera
+      - /dev/dri:/dev/dri                 # GPU acceleration
+      - /dev/snd:/dev/snd                 # Audio
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw  # X11 display
+      - ../src:/ros2_ws/src          # Source code (live)
+      - ~/.bbboy:/root/.bbboy             # Personality data persistence
+      - ../assets:/ros2_ws/assets          # Animation/audio assets
+    network_mode: host
+    ipc: host
+    cap_add:
+      - SYS_NICE
+    command: >
+      ros2 launch spook_personality personality_launch.py
+      enable_face_tracking:=true
+      display_width:=1920
+      display_height:=1080
+      target_fps:=60
