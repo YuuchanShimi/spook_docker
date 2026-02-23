@@ -1,0 +1,48 @@
+FROM ros:humble-ros-base
+
+# Install Godot 4 dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    libgl1 \
+    libglu1-mesa \
+    libx11-6 \
+    libxcursor1 \
+    libxrandr2 \
+    libxi6 \
+    libxinerama1 \
+    libasound2 \
+    libpulse0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Godot 4.2.1 for ARM64 (Jetson)
+WORKDIR /tmp
+RUN wget https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_linux.arm64.zip && \
+    unzip Godot_v4.2.1-stable_linux.arm64.zip && \
+    mv Godot_v4.2.1-stable_linux.arm64 /usr/local/bin/godot4 && \
+    chmod +x /usr/local/bin/godot4 && \
+    rm -f Godot_v4.2.1-stable_linux.arm64.zip
+
+# Install Python ROS2 dependencies
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up ROS2 workspace
+WORKDIR /ros2_ws
+COPY src/spook_face_animation /ros2_ws/src/spook_face_animation
+
+# Build the ROS2 package
+RUN . /opt/ros/humble/setup.sh && \
+    colcon build --packages-select spook_face_animation
+
+# Source workspace
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
+    echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
+
+# Set display for X11 forwarding
+ENV DISPLAY=:0
+ENV SDL_VIDEODRIVER=x11
+
+WORKDIR /ros2_ws
+CMD ["bash", "-c", "source install/setup.bash && ros2 launch spook_face_animation face_animation_launch.py"]
