@@ -95,14 +95,19 @@ services:
       - QT_X11_NO_MITSHM=1
       - ROS_DOMAIN_ID=0
       - ROS_LOCALHOST_ONLY=0
+      - ALSA_CARD=0
+      - AUDIODEV=/dev/dsp
     devices:
       - /dev/dri:/dev/dri                 # GPU acceleration (required!)
+      - /dev/snd:/dev/snd                 # Audio devices
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # X11 display
       - ../src/spook_face_animation:/ros2_ws/src/spook_face_animation  # Live code updates
       - /dev/shm:/dev/shm                 # Shared memory for rendering
     network_mode: host
     ipc: host
+    group_add:
+      - "29"  # audio group
     cap_add:
       - SYS_NICE
     command: >
