@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     libxi6 \
     libxinerama1 \
+    libxkbcommon0 \
+    libxkbcommon-x11-0 \
     libasound2 \
     libpulse0 \
     && rm -rf /var/lib/apt/lists/*
