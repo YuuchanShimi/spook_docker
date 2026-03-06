@@ -17,13 +17,21 @@ RUN apt-get update && apt-get install -y \
     libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install Godot 4.2.1 for ARM64 (Jetson)
+# Download and install Godot 4.2.1
 WORKDIR /tmp
-RUN wget https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_linux.arm64.zip && \
-    unzip Godot_v4.2.1-stable_linux.arm64.zip && \
-    mv Godot_v4.2.1-stable_linux.arm64 /usr/local/bin/godot4 && \
+RUN apt-get update && apt-get install -y wget unzip && \
+    ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "arm64" ]; then \
+      GODOT_ARCH="linux.arm64"; \
+    else \
+      GODOT_ARCH="linux.x86_64"; \
+    fi && \
+    wget https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_$GODOT_ARCH.zip && \
+    unzip Godot_v4.2.1-stable_$GODOT_ARCH.zip && \
+    mv Godot_v4.2.1-stable_$GODOT_ARCH /usr/local/bin/godot4 && \
     chmod +x /usr/local/bin/godot4 && \
-    rm -f Godot_v4.2.1-stable_linux.arm64.zip
+    rm -f Godot_v4.2.1-stable_$GODOT_ARCH.zip && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Python ROS2 dependencies
 RUN apt-get update && apt-get install -y \

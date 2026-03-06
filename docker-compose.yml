@@ -48,7 +48,8 @@ services:
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - DISPLAY=:0
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.Xauthority
       - SDL_VIDEODRIVER=x11
       - XDG_RUNTIME_DIR=/tmp/runtime-root
       - QT_X11_NO_MITSHM=1
@@ -62,6 +63,7 @@ services:
       - /dev/snd:/dev/snd                 # Audio devices
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # X11 display
+      - ${HOME}/.Xauthority:/tmp/.Xauthority:ro  # X11 authentication
       - ~/.bbboy:/root/.bbboy             # Personality data persistence
       - ../assets:/ros2_ws/assets          # Animation/audio assets
       - /dev/shm:/dev/shm                 # Shared memory for audio
@@ -89,19 +91,22 @@ services:
     privileged: true
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - DISPLAY=:0
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.Xauthority
       - SDL_VIDEODRIVER=x11
       - XDG_RUNTIME_DIR=/tmp/runtime-root
       - QT_X11_NO_MITSHM=1
       - ROS_DOMAIN_ID=0
       - ROS_LOCALHOST_ONLY=0
+      - PULSE_SERVER=unix:/run/user/host/pulse/native
       - ALSA_CARD=0
-      - AUDIODEV=/dev/dsp
     devices:
-      - /dev/dri:/dev/dri                 # GPU acceleration (required!)
+      - /dev/dri:/dev/dri                 # GPU acceleration
       - /dev/snd:/dev/snd                 # Audio devices
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # X11 display
+      - ${HOME}/.Xauthority:/tmp/.Xauthority:ro  # X11 authentication
+      - /run/user/1000/pulse:/run/user/host/pulse:ro  # PulseAudio socket
       - ../src/spook_face_animation:/ros2_ws/src/spook_face_animation  # Live code updates
       - /dev/shm:/dev/shm                 # Shared memory for rendering
     network_mode: host
@@ -116,7 +121,7 @@ services:
       rm -rf build/spook_face_animation install/spook_face_animation &&
       colcon build --packages-select spook_face_animation --symlink-install &&
       source install/setup.bash &&
-      ros2 launch spook_face_animation face_animation_launch.py"
+      ros2 launch spook_face_animation face_animation_launch.py display:=${DISPLAY}"
     restart: unless-stopped
     # depends_on:
     #   - spook-base
